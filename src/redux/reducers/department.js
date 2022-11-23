@@ -1,6 +1,8 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { gql } from '@apollo/client'
 import { client } from '../../environment'
+import { toast } from 'react-toastify';
+
 
 const createDepartmentMutation = gql`mutation addDepartment($object:department_insert_input!){
     insert_department_one(object:$object){
@@ -28,10 +30,18 @@ const updateDepartmentMutation = gql `mutation update_department($object:[depart
       }
 }`;
 
+const deleteDepartmentMutation = gql `mutation deleteDepartment($id: Int!) {
+    delete_department(where: {id: {_eq: $id}}) {
+      affected_rows
+    }
+  }`; 
 
 
-export const createDepartment = createAsyncThunk('department/create', async (payload) => {
+
+export const createDepartment = createAsyncThunk('department/create', async (payload, thunkAPI) => {
     console.log("Create Department Payload ...................", payload)
+    console.log('11111111111')
+     
     let data = {}
     try {
         const response = await client.mutate({
@@ -43,7 +53,11 @@ export const createDepartment = createAsyncThunk('department/create', async (pay
             status: true,
             message: 'Department Added Sucessfully'
         }
-        console.log('response+++++++11', data)
+        console.log('response+++++++11',response, data)
+        toast.success(data.message);
+        thunkAPI.dispatch(setAddform(false))
+        thunkAPI.dispatch(setButtonLoading(false))
+        
 
     } catch (e) {
         console.log('error', e)
@@ -52,6 +66,8 @@ export const createDepartment = createAsyncThunk('department/create', async (pay
             message: e.message
         }
         console.log('response+++++++', data)
+        toast.error(data.message);
+        thunkAPI.dispatch(setButtonLoading(false))
     }
     return data
 })
@@ -69,7 +85,7 @@ export const getDepartments = createAsyncThunk('department/getDepartments', asyn
     }
 })
 
-export const updateDepartment = createAsyncThunk('department/updateDepartment', async (payload) => {
+export const updateDepartment = createAsyncThunk('department/updateDepartment', async (payload , thunkAPI) => {
     console.log("Update Department Payload ...................", payload)
     let data = {}
     try {
@@ -83,6 +99,10 @@ export const updateDepartment = createAsyncThunk('department/updateDepartment', 
             message: 'Department Updated Sucessfully'
         }
         console.log('response+++++++', data)
+        toast.success(data.message);
+        thunkAPI.dispatch(setUpdateForm(false))
+        thunkAPI.dispatch(setButtonLoading(false))
+        
     } catch (e) {
         console.log('error', e)
         data = {
@@ -90,33 +110,41 @@ export const updateDepartment = createAsyncThunk('department/updateDepartment', 
             message: e.message
         }
         console.log('response+++++++', data)
+        toast.error(data.message);
+        thunkAPI.dispatch(setButtonLoading(false))
     }
     return data
 })
 
-// export const deleteDepartment = createAsyncThunk('locations/delete', async (payload) => {
-//     let data = {}
-//     console.log("deleteLocation...................", payload)
-//     try {
-//         const response = await client.mutate({
-//             mutation: deleteLocationMutation, variables: {
-//                 "id": `${payload}`
-//             }
-//         })
-//         data = {
-//             status: true,
-//             message: 'Location Deleted Sucessfully'
-//         }
-//         console.log('response+++++++', data)
-//     } catch (e) {
-//         console.log('error', e)
-//         data = {
-//             status: true,
-//             message: 'Location Deleted Sucessfully'
-//         }
-//     }
-//     return data
-// })
+export const deleteDepartment = createAsyncThunk('department/delete', async (payload,thunkAPI) => {
+    let data = {}
+    console.log("deleteDepartment...................", payload)
+    try {
+        const response = await client.mutate({
+            mutation: deleteDepartmentMutation, variables: {
+                "id": `${payload}`
+            }
+        })
+        data = {
+            status: true,
+            message: 'Department Deleted Sucessfully'
+        }
+        console.log('response+++++++', data)
+        toast.success(data.message);
+        thunkAPI.dispatch(setUpdateForm(false))
+        thunkAPI.dispatch(setButtonLoading(false))
+        
+    } catch (e) {
+        console.log('error', e)
+        data = {
+            status: true,
+            message: e.message
+        }
+        toast.error(data.message);
+        thunkAPI.dispatch(setButtonLoading(false))
+    }
+    return data
+})
 
 export const departmentSlice = createSlice({
     name: 'department',
@@ -124,13 +152,15 @@ export const departmentSlice = createSlice({
         departmentsList: [],
         updatedepartmentResponse: {},
         createDepRes :{},
+        showAddForm : false,
+        showUpdateForm: false,
+        buttonLoading : false
 
     },
     extraReducers: {
         [createDepartment.fulfilled]: (state, action) => {
-            console.log('+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++')
             state.createDepRes = action.payload;
-            console.log('2222222222222222222222222222222222222',state)
+            console.log('2222222222222222222222222222222222222',state, action.payload)
             return state;
         },
         [getDepartments.fulfilled]: (state, action) => {
@@ -139,21 +169,30 @@ export const departmentSlice = createSlice({
             return state;
         },
         [updateDepartment.fulfilled]: (state, action) => {
+            console.log('11111111111111')
             state.updatedepartmentResponse = action.payload;
             console.log('update department return ', action.payload, state.departmentResponse)
+            console.log('2222222222')
             return state;
         },
     },
     reducers: {
-        logOut: (state) => {
-            console.log('----------------- Logout')
-            state.accessToken = ""
-
+        setAddform: (state,action) => {
+            state.showAddForm = action.payload
+            return state;
+        },
+        setUpdateForm : (state,action) => {
+            state.showUpdateForm = action.payload
+            return state;
+        },
+        setButtonLoading : (state, action)=>{
+            state.buttonLoading = action.payload
+            return state;
         }
     }
 }
 )
 
-export const { } = departmentSlice.actions
+export const { setAddform, setUpdateForm, setButtonLoading } = departmentSlice.actions
 
 export default departmentSlice.reducer
